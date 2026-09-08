@@ -1,0 +1,19 @@
+BINDING PYTHON AND CPP FUNCTIONS
+-so firstly we are trying to find a way to bind cpp function to python using pybind11
+-include <pybind11/pybind11.h> in cpp program
+-after all the cpp function have been defined--
+    PYBIND11_MODULE(example, m) {
+        m.def("add", &add);
+    }
+
+    we are first creating a module named example
+    and that module will have the function called add which py can access
+    ths add function behaves exactly like the add in cpp, since the add of cpp is compiled and converted to py form
+
+-to get the class form cpp to py and expose it values
+    PYBIND11_MODULE(test, m)
+    {
+        py::class_<Board>(m, "Board")
+            .def(py::init<int>())
+            .def_readwrite("score",&Board::score);
+    }
