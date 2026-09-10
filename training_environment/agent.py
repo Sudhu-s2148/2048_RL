@@ -26,22 +26,21 @@ class Agent(nn.Module):
 
     def update(self,batch,target_network):
         gamma = 0.9
-        for i in range(len(batch)):
-            state = batch[i][0]
-            action = batch[i][1]
-            next_state = batch[i][2]
-            reward = batch[i][3]
-            done = batch[i][4]
+        state = batch[:,0]
+        action = batch[:,1]
+        next_state = batch[:,2]
+        reward = batch[:,3]
+        done = batch[:,4]
 
-            Q_target_max = target_network.forward(next_state).max()
-            if done:
-                target_value = reward
-            else:
-                target_value = reward + gamma*Q_target_max
+        Q_target_max = torch.max(target_network.forward(next_state),dim = 1).values
 
-            predicted_value = self.forward(state)[action]
-            loss = F.smooth_l1_loss(predicted_value,target_value)
+        target_value = reward + (1-done)*gamma*Q_target_max
 
-            self.optimizer.zero_grad()
-            loss.backward()
-            self.optimizer.step()
+        q_values = self.forward(state)
+        row_indices = torch.arange(q_values.size(0))
+        predicted_value = q_values[row_indices,action]
+        loss = F.smooth_l1_loss(predicted_value,target_value)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
