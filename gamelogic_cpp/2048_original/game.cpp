@@ -3,7 +3,11 @@
 #include <random>
 #include <cmath>
 
-#include "raylib.h"
+/*#include "raylib.h"*/
+
+
+#include <pybind11/pybind11.h>
+#include <pybind11/stl.h>
 
 struct iVec2{
     int x;
@@ -13,10 +17,10 @@ struct iVec2{
 class Board
 {
     private:
-        int width;
-        int height;
-        Color color;
-        std::vector<float>grid_params = std::vector<float>(4); 
+        /*int width;*/
+        /*int height;*/
+        /*Color color;*/
+        /*std::vector<float>grid_params = std::vector<float>(4);*/
         static std::mt19937 m_gen;
         
 
@@ -25,11 +29,11 @@ class Board
         bool game_state;
         int score;
 
-        Board(int w, int h, Color c)
+        Board()
         {
-            width = w;
+            /* width = w;
             height = h;
-            color = c;
+            color = c; */
             game_state = true;
             score = 0;
         }
@@ -40,7 +44,7 @@ class Board
             return dist(m_gen);
         }
 
-        void init_grid()
+        /*void init_grid()
         {
             float x_start = width/4.0f;
             float y_start = height/4.0f;
@@ -49,9 +53,9 @@ class Board
             float column_width = width/8.0f;
 
             grid_params = {x_start, y_start, row_width, column_width};
-        }
+        }*/
 
-        void draw_grid()
+        /* void draw_grid()
         {
             for (int i = 0; i <= 4; i++)
             {
@@ -103,7 +107,7 @@ class Board
             }
 
             DrawText(std::to_string(score).c_str(), width/2, height - 40, 20, WHITE);
-        }
+        } */
 
         void spawn_number()
         {
@@ -366,7 +370,7 @@ class Board
 
 std::mt19937 Board::m_gen(std::random_device{}());
 
-int main()
+/* int main()
 {
     constexpr int WIDTH = 800;
     constexpr int HEIGHT = 800;
@@ -416,4 +420,22 @@ int main()
 
     CloseWindow();
     return 0;
+} */
+
+namespace py = pybind11;
+
+PYBIND11_MODULE(game,m){
+    py::class_<Board>(m,"Board")
+        .def(py::init<>())
+        .def("spawn_number",&Board::spawn_number)
+        .def("get_random",&Board::get_random)
+        .def("move_left",&Board::move_left)
+        .def("move_right",&Board::move_right)
+        .def("move_up",&Board::move_up)
+        .def("move_down",&Board::move_down)
+        .def("is_game_over",&Board::is_game_over)
+        .def("reset_board",&Board::reset_board)
+        .def_readwrite("game_state",&Board::game_state)
+        .def_readwrite("board_state",&Board::board_state)
+        .def_readwrite("score",&Board::score);
 }

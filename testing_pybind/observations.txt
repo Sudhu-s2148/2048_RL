@@ -1,3 +1,0 @@
-MY OBSERVATIONS?LEARNING OUTCOMES
-
-how can we change the observation state of the RL agent to make it learn better?

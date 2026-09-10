@@ -1,3 +1,12 @@
+import sys
+from pathlib import Path
+
+# This line stays EXACTLY as it is:
+parent_dir = Path(__file__).resolve().parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
+
+# Replace 'my_module' with your actual .pyd filename (no extension):
 import game
 import math
 import random
