@@ -1,0 +1,12 @@
+from buffer import exp_buffer
+test_buffer = exp_buffer(5)
+test_buffer.append("E1")
+test_buffer.append("E2")
+test_buffer.append("E3")
+test_buffer.append("E4")
+test_buffer.append("E5")
+print(list(test_buffer.buffer))
+test_buffer.append("E6")
+print(list(test_buffer.buffer))
+batch = test_buffer.sample(3)
+print(list(batch))
