@@ -1,9 +1,9 @@
-import game
 import torch
 import random
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class Agent(nn.Module):
     def __init__(self,learning_rate,weight_decay):
@@ -14,36 +14,37 @@ class Agent(nn.Module):
         self.output = nn.Linear(64,4)
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = weight_decay)
     def forward(self,x):
-        x = torch.tensor(x)
         x = F.relu(self.input(x))
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         x = self.output(x)
         return x
     def choice(self,state,epsilon):
-        q_values = self.forward(state)
-        print("State:", state)
-        print("Q-values:", q_values.detach().numpy())
-        print("Chosen:", torch.argmax(q_values).item())
+        state = torch.tensor(state, dtype=torch.float32).to(device)
+        with torch.no_grad():
+            q_values = self.forward(state)
+        #print("State:", state)
+        #print("Q-values:", q_values.cpu().detach().numpy())
+        #print("Chosen:", torch.argmax(q_values).item())
         if random.random()<epsilon:
             return random.randint(0,3)
         else:
             return int(q_values.argmax())
 
     def update(self,batch,target_network,gamma):
-        state = torch.tensor([row[0] for row in batch])
-        action = torch.tensor([row[1] for row in batch])
-        next_state = torch.tensor([row[2] for row in batch])
-        reward = torch.tensor([row[3] for row in batch])
-        done = torch.tensor([row[4] for row in batch], dtype=torch.float32)
-        print(
+        state = torch.tensor([row[0] for row in batch]).to(device)
+        action = torch.tensor([row[1] for row in batch]).to(device)
+        next_state = torch.tensor([row[2] for row in batch]).to(device)
+        reward = torch.tensor([row[3] for row in batch]).to(device)
+        done = torch.tensor([row[4] for row in batch], dtype=torch.float32).to(device)
+        '''print(
             "Shapes:",
             state.shape,
             action.shape,
             next_state.shape,
             reward.shape,
             done.shape
-        )
+        )'''
         with torch.no_grad():
             Q_target_max = torch.max(target_network.forward(next_state),dim = 1).values
 

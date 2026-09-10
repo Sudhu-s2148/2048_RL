@@ -14,13 +14,13 @@ import torch
 import agent, buffer
 import copy
 import math
-import json
+import csv,json
+
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(device)
 
 #########################################################################
-data = {}
-data["format"] = ["total_score","max_tile","ep_length"]
-
-session = 0
+session = 1
 
 learning_rate = 0.0003
 weight_decay = 1e-4
@@ -31,21 +31,44 @@ target_sync_count = 0
 
 total_episodes = 1000
 batch_size = 64
-target_sync = 500
+target_sync = 1000
 
 gamma = 0.99
 epsilon = 1
-decay = 0.99971
+epsilon_decay = 0.99971
 epsilon_min = 0.09
 
 #########################################################################
+data = {}
 
-save_path = f"C:/Users/sudha/Documents/2048_RL/checkpoints/network_{session}.pth"
+data["parameters"] = {
+    "learning_rate": learning_rate,
+    "weight_decay": weight_decay,
+    "gamma": gamma,
+    "batch_size": batch_size,
+    "replay_buffer_size": batch_size,
+    "target_sync": target_sync,
+    "epsilon_start": epsilon,
+    "epsilon_decay": epsilon_decay,
+    "epsilon_min": epsilon_min
+}
+data["format"] = [
+    "episode",
+    "total_score",
+    "max_tile",
+    "ep_length",
+    "epsilon"
+]
 
+data["episodes"] = []
+
+save_path_network = f"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_{session}.pth"
+save_path_csv = f"C:/Users/sudha/Documents/2048_RL/artifacts/output_data/run_{session}.csv"
+save_path_json = f"C:/Users/sudha/Documents/2048_RL/artifacts/output_data/run_{session}.json"
 #setting up the network and other variables
-online_network = agent.Agent(learning_rate,weight_decay)
+online_network = agent.Agent(learning_rate,weight_decay).to(device)
 replay_buffer = buffer.exp_buffer(10000)
-target_network = copy.deepcopy(online_network)
+target_network = copy.deepcopy(online_network).to(device)
 
 #to genarate the flattened state with each tile value being the power of 2
 def state_gen(board_state):
@@ -100,19 +123,19 @@ for episode in range(total_episodes):
 
         if replay_buffer.len()>=batch_size:
                 train_batch = replay_buffer.sample(batch_size)
-                print(
+                '''print(
                     f"\nEpisode: {episode} | Step: {steps} | "
                     f"Buffer: {len(replay_buffer.buffer)} | "
                     f"State shape: {len(train_batch[0][0])} | "
                     f"Action: {train_batch[0][1]} | "
                     f"Reward: {train_batch[0][3]} | "
                     f"Done: {train_batch[0][4]}"
-                )
+                )'''
                 online_network.update(train_batch,target_network,gamma)
 
         target_sync_count+=1
 
-    epsilon = max(epsilon * decay, epsilon_min)
+    epsilon = max(epsilon * epsilon_decay, epsilon_min)
     print(
         f"Episode {episode + 1} | "
         f"Score: {board.score} | "
@@ -120,11 +143,28 @@ for episode in range(total_episodes):
         f"Steps: {steps} | "
         f"Epsilon: {epsilon:.4f}"
     )
-    data[episode] = [board.score,max_tile(board.board_state),steps]
+    data["episodes"].append([
+        episode,
+        board.score,
+        max_tile(board.board_state),
+        steps,
+        epsilon
+    ])
 
     
     if target_sync_count == target_sync:
         target_network = copy.deepcopy(online_network)
         target_sync_count = 0
 
-torch.save(online_network.state_dict(),save_path)
+torch.save(online_network.state_dict(),save_path_network)
+
+with open(save_path_json, "w") as file:
+    json.dump(data, file, indent=4)
+
+with open(save_path_csv, "w", newline="") as file:
+    writer = csv.writer(file)
+
+    writer.writerow(data["format"])
+
+    for episode_data in data["episodes"]:
+        writer.writerow(episode_data)
