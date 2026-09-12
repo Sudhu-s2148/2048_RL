@@ -7,3 +7,5 @@ __pycache__/
 *.exp
 *.pth
 artifacts/
+.env
+analysis/

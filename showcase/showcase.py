@@ -1,9 +1,10 @@
 import sys
 from pathlib import Path
+import os
 
 import pygame
 import torch
-import random
+import math
 
 parent_dir = Path(__file__).resolve().parent.parent
 if str(parent_dir) not in sys.path:
@@ -23,12 +24,14 @@ if str(target_dir) not in sys.path:
 # Import your module directly by filename (omit .py or .pyd)
 import agent
 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 # ============================================================
 # SETTINGS
 # ============================================================
 
-MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/checkpoints/network_0.pth"
+MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_4.pth"
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 650
@@ -81,24 +84,13 @@ TILE_COLORS = {
 # ============================================================
 
 def state_gen(board_state):
-
-    state = []
-
-    for row in board_state:
-
-        for value in row:
-
-            if value == 0:
-                state.append(0)
-
-            else:
-                state.append(
-                    torch.log2(
-                        torch.tensor(float(value))
-                    ).item()
-                )
-
-    return state
+    transposed =  [list(row) for row in zip(*board_state)]
+    reduced_board = [
+        [math.log2(val) if val!=0 else 0 for val in row ] 
+        for row in transposed
+    ]
+    flattened = torch.flatten(torch.tensor(reduced_board)).tolist()
+    return flattened
 
 
 # ============================================================
@@ -325,7 +317,7 @@ def main():
     online_network = agent.Agent(
         learning_rate=0.0003,
         weight_decay=1e-4
-    )
+    ).to(device)
 
     online_network.load_state_dict(
         torch.load(
@@ -333,6 +325,8 @@ def main():
             map_location="cpu"
         )
     )
+    print("Loading from:", os.path.abspath(MODEL_PATH))
+    print("File exists:", os.path.exists(MODEL_PATH))
 
     online_network.eval()
 
@@ -386,8 +380,9 @@ def main():
             # Completely greedy / exploitation
             action = online_network.choice(
                 current_state,
-                0
+                0.09
             )
+            '''action = random.randint(0,3)'''
 
 
             # ------------------------------------------------

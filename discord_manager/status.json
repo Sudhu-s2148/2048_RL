@@ -1,0 +1,12 @@
+{
+    "session": 404,
+    "episode": 300,
+    "total_episodes": 300,
+    "epsilon": 0.8427804839487442,
+    "score": 828,
+    "best_score": 2952,
+    "best_tile": 64,
+    "ep_length": 114,
+    "valid_moves": 99,
+    "merging_moves": 55
+}

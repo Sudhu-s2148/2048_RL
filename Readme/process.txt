@@ -48,3 +48,15 @@ replay buffer
 -the buffer must be a fixed size queue since any extra experience will be pushed
  and the last experience will be popped out
 -we will randomly select a batch of 64/128 experience from the queue for training 
+
+agent
+-the job of agent is to create the network, do the forward pass,choose form the 
+ q_values and update the weights
+-network current is a 16:64:64:4 architecture
+-choice funtion takes the q_value tensor and epsilon_greedy value to choose an action
+ which will be exploration if randomint<exploration else best actioned deemed
+-update function takes the target_network and the experience batch that will be used
+ to update the weights. it uses the 
+    -bellmans update method
+    -optimizer being Adam
+    -loss function as Huber loss
