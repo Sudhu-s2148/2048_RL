@@ -28,3 +28,24 @@ to import game from a directory above it
 
     # Replace 'my_module' with your actual .pyd filename (no extension):
     import game
+
+def update(self,batch,target_network):
+        gamma = 0.9
+        state = batch[:,0]
+        action = batch[:,1]
+        next_state = batch[:,2]
+        reward = batch[:,3]
+        done = batch[:,4]
+
+        Q_target_max = torch.max(target_network.forward(next_state),dim = 1).values
+
+        target_value = reward + (1-done)*gamma*Q_target_max
+
+        q_values = self.forward(state)
+        row_indices = torch.arange(q_values.size(0))
+        predicted_value = q_values[row_indices,action]
+        loss = F.smooth_l1_loss(predicted_value,target_value)
+
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
