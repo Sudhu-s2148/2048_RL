@@ -49,7 +49,7 @@ data["parameters"] = {
     "weight_decay": weight_decay,
     "gamma": gamma,
     "batch_size": batch_size,
-    "replay_buffer_size": batch_size,
+    "replay_buffer_size": 10000,
     "target_sync": target_sync,
     "epsilon_start": epsilon,
     "epsilon_decay": epsilon_decay,
@@ -64,6 +64,10 @@ data["format"] = [
     "invalid_moves",
     "merging_moves",
     "non_merging_valid_moves",
+    "random_invalid_moves",
+    "random_valid_moves",    
+    "exploit_invalid_moves",
+    "exploit_valid_moves",
     "epsilon"
 ]
 
@@ -101,17 +105,27 @@ def max_tile(matrix):
 for episode in range(total_episodes):
     board = game.Board()
     board.spawn_number()
+
     steps = 0
+
     valid_moves = 0
     invalid_moves = 0
     merging_moves = 0
     non_merging_valid_moves = 0
+
+    random_invalid_moves = 0
+    random_valid_moves = 0
+
+    exploit_invalid_moves =0
+    exploit_valid_moves = 0
+
     done = board.game_state
     while done!=False:
 
         current_state = state_gen(board.board_state)
         prev_score = board.score 
-        action  = online_network.choice(current_state,epsilon)
+        action,type  = online_network.choice(current_state,epsilon)
+        #print("action:",action)
 
         if action == 0:
             board.move_up()           
@@ -132,9 +146,18 @@ for episode in range(total_episodes):
             #print("invalid move")
             reward-=1
             invalid_moves+=1
+            if type == 1:
+                 exploit_invalid_moves+=1
+            else:
+                 random_invalid_moves+=1
         else:
-             valid_moves+=1
-             if reward == 0:
+            valid_moves+=1
+            if type == 1:
+                exploit_valid_moves+=1
+            else:
+                random_valid_moves+=1
+
+            if reward == 0:
                   non_merging_valid_moves+=1
 
         
@@ -168,9 +191,10 @@ for episode in range(total_episodes):
         f"Score: {board.score} | "
         f"Max tile: {best_tile} | "
         f"Steps: {steps} | "
-        f"Epsilon: {epsilon:.4f}|"
-        f"valid moves: {valid_moves}|"
-        f"merging moves: {merging_moves}"
+        f"valid moves: {valid_moves}| "
+        f"invalid moves:{invalid_moves}| "
+        f"merging moves: {merging_moves}| "
+        f"Epsilon: {epsilon:.4f}| "
 
     )
 
@@ -183,6 +207,10 @@ for episode in range(total_episodes):
         invalid_moves,
         merging_moves,
         non_merging_valid_moves,
+        random_invalid_moves,
+        random_valid_moves,    
+        exploit_invalid_moves,
+        exploit_valid_moves,
         epsilon
     ])
 
@@ -199,8 +227,10 @@ for episode in range(total_episodes):
     ep_data["best_score"] = best_score
     ep_data["best_tile"] = best_tile
     ep_data["ep_length"] = steps
-    ep_data["valid_moves"] = valid_moves
+    ep_data["invalid_moves"] = invalid_moves
     ep_data["merging_moves"] = merging_moves
+    ep_data["random_invalid_moves"] = random_invalid_moves
+    ep_data["exploit_invalid_moves"] = exploit_invalid_moves
 
     with open(save_path_discord, "w") as file:
         json.dump(ep_data, file, indent=4)

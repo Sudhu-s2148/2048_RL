@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import asyncio
 import discord
 from discord.ext import tasks
@@ -18,18 +19,9 @@ client = discord.Client(intents=intents)
 training_finished_notified = False
 
 
-import glob
-
-import os
-import json
-import glob
-import asyncio
-import discord
-
 async def run_analysis_and_send(channel):
     """Executes analyze.py located in the parent directory using local status.json."""
     
-    # Define the parent directory (..\) where analyze.py and artifacts live
     parent_dir = os.path.abspath("..")
     script_path = os.path.join(parent_dir, "analyze.py")
     analysis_dir = os.path.join(parent_dir, "analysis")
@@ -57,12 +49,17 @@ async def run_analysis_and_send(channel):
         "py", script_path, json_path,
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
-        cwd=parent_dir  # Ensures analyze.py runs relative to 2048_RL root
+        cwd=parent_dir
     )
     stdout, stderr = await process.communicate()
 
     if process.returncode != 0:
-        await channel.send(f"❌ Error running `analyze.py`:\n```{stderr.decode()}```")
+        # Truncate stderr to ensure message stays safely under Discord's 2000-char limit
+        err_msg = stderr.decode().strip()
+        if len(err_msg) > 1800:
+            err_msg = err_msg[-1800:]  # Retain the bottom tail end of the traceback
+            
+        await channel.send(f"❌ Error running `analyze.py`:\n```\n...{err_msg}\n```")
         return
 
     # 4. Gather generated PNGs from parent's analysis folder
@@ -111,7 +108,6 @@ async def check_status():
                 )
                 training_finished_notified = True
                 
-                # Automatically run and send analysis when training completes
                 await run_analysis_and_send(channel)
 
         elif episode < total_episodes:
@@ -140,16 +136,17 @@ async def on_message(message):
         await message.channel.send(
             f"📊 **Training Status**\n"
             f"Episode: {status['episode']} / {status['total_episodes']}\n"
-            f"Epsilon: {status['epsilon']:.3f}\n"
             f"Current score: {status['score']}\n"
             f"Best score: {status['best_score']}\n"
             f"Best tile: {status['best_tile']}\n"
-            f"valid moves: {status['valid_moves']}\n"
+            f"invalid moves: {status['invalid_moves']}\n"
+            f"random invalid moves: {status['random_invalid_moves']}\n"
+            f"exploit invalid moves: {status['exploit_invalid_moves']}\n"
             f"episode length(moves): {status['ep_length']}\n"
-            f"merging moves: {status['merging_moves']}"
+            f"merging moves: {status['merging_moves']}\n"
+            f"Epsilon: {status['epsilon']:.3f}"
         )
 
-    # Added !analyze command to manually generate and fetch the plot
     elif message.content == "!analyze":
         await message.channel.send("Generating plot from `analyze.py`...")
         await run_analysis_and_send(message.channel)

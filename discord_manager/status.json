@@ -1,12 +1,14 @@
 {
     "session": 404,
-    "episode": 300,
-    "total_episodes": 300,
-    "epsilon": 0.8427804839487442,
-    "score": 828,
-    "best_score": 2952,
-    "best_tile": 64,
-    "ep_length": 114,
-    "valid_moves": 99,
-    "merging_moves": 55
+    "episode": 7,
+    "total_episodes": 5000,
+    "epsilon": 0.9960168164219386,
+    "score": 1364,
+    "best_score": 2336,
+    "best_tile": 128,
+    "ep_length": 170,
+    "invalid_moves": 28,
+    "merging_moves": 78,
+    "random_invalid_moves": 28,
+    "exploit_invalid_moves": 0
 }

@@ -24,12 +24,14 @@ class Agent(nn.Module):
         with torch.no_grad():
             q_values = self.forward(state)
         #print("State:", state)
+        chosen = torch.argmax(q_values).item()
         #print("Q-values:", q_values.cpu().detach().numpy())
-        #print("Chosen:", torch.argmax(q_values).item())
+        #print("Chosen:", chosen)
+        #print(state)
         if random.random()<epsilon:
-            return random.randint(0,3)
+            return random.randint(0,3),0
         else:
-            return int(q_values.argmax())
+            return int(chosen),1
 
     def update(self,batch,target_network,gamma):
         state = torch.tensor([row[0] for row in batch]).to(device)

@@ -5,6 +5,7 @@ import os
 import pygame
 import torch
 import math
+import random
 
 parent_dir = Path(__file__).resolve().parent.parent
 if str(parent_dir) not in sys.path:
@@ -31,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # SETTINGS
 # ============================================================
 
-MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_4.pth"
+MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_404.pth"
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 650
@@ -85,6 +86,8 @@ TILE_COLORS = {
 
 def state_gen(board_state):
     transposed =  [list(row) for row in zip(*board_state)]
+    for row in board_state:
+        print(row)
     reduced_board = [
         [math.log2(val) if val!=0 else 0 for val in row ] 
         for row in transposed
@@ -380,9 +383,11 @@ def main():
             # Completely greedy / exploitation
             action = online_network.choice(
                 current_state,
-                0.09
-            )
-            '''action = random.randint(0,3)'''
+                0
+            )[0]
+            print(action)
+            '''
+            action = random.randint(0,3)'''
 
 
             # ------------------------------------------------
@@ -426,7 +431,7 @@ def main():
         # ----------------------------------------------------
         # Draw
         # ----------------------------------------------------
-
+        state = [list(row) for row in zip(*board.board_state)]
         draw_board(
             screen,
             board.board_state,
