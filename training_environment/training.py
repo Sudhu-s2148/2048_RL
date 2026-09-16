@@ -4,11 +4,11 @@ import sys
 from pathlib import Path
 
 # This line stays EXACTLY as it is:
-parent_dir = Path(__file__).resolve().parent.parent
-if str(parent_dir) not in sys.path:
-    sys.path.insert(0, str(parent_dir))
 
 
+project_dir = Path(__file__).resolve().parent.parent
+if str(project_dir) not in sys.path:
+    sys.path.insert(0, str(project_dir))
 
 # Replace 'my_module' with your actual .pyd filename (no extension):
 import game
@@ -22,10 +22,11 @@ import csv,json
 
 #########################################################################
 async def main():
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(device)
 
-    bot_script_path = parent_dir / "discord_manager" / "bot.py"  # Ensure this path matches your bot file location
+    bot_script_path = project_dir / "discord_manager" / "bot.py"  # Ensure this path matches your bot file location
     bot_process = await asyncio.create_subprocess_exec(
         sys.executable, str(bot_script_path)
     )
@@ -40,13 +41,13 @@ async def main():
     total_steps = 0
     target_sync_count = 0
 
-    total_episodes = 25
+    total_episodes = 10000
     batch_size = 64
     target_sync = 1000
 
     gamma = 0.99
     epsilon = 1
-    epsilon_decay = 0.99943
+    epsilon_decay = 0.999736
     epsilon_min = 0.09
 
     best_tile = 0
@@ -84,10 +85,10 @@ async def main():
 
     data["episodes"] = []
 
-    save_path_network = f"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_{session}.pth"
-    save_path_csv = f"C:/Users/sudha/Documents/2048_RL/artifacts/output_data/run_{session}.csv"
-    save_path_json = f"C:/Users/sudha/Documents/2048_RL/artifacts/output_data/run_{session}.json"
-    save_path_discord = f"C:/Users/sudha/Documents/2048_RL/discord_manager/status.json"
+    save_path_network = project_dir / "artifacts" / "checkpoints" / f"network_{session}.pth"
+    save_path_csv = project_dir / "artifacts" / "output_data" / f"run_{session}.csv"
+    save_path_json = project_dir / "artifacts" / "output_data" / f"run_{session}.json"
+    save_path_discord = project_dir / "discord_manager" / "status.json"
     #setting up the network and other variables
     online_network = agent.Agent(learning_rate,weight_decay).to(device)
     replay_buffer = buffer.exp_buffer(10000)

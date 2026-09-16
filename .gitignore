@@ -9,4 +9,4 @@ __pycache__/
 artifacts/
 .env
 analysis/
-*.json
+status.json
