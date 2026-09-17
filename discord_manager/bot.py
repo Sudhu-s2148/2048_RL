@@ -204,3 +204,4 @@ if __name__ == "__main__":
         client.run(TOKEN)
     except Exception as e:
         print(f"Bot exited: {e}")
+

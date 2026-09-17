@@ -14,15 +14,18 @@ REQUIRED = [
     "merging_moves",
     "non_merging_valid_moves",
     "random_invalid_moves",
-    "random_valid_moves",
+    "random_valid_moves",    
     "exploit_invalid_moves",
     "exploit_valid_moves",
+    "consecutive_invalid_moves",
+    "terminated_by_invalid_cap",
     "epsilon"
 ]
 
 
 def load_data(path):
     path = Path(path)
+
     if not path.exists():
         raise FileNotFoundError(f"File not found: {path}")
 
@@ -31,14 +34,25 @@ def load_data(path):
 
     if path.suffix.lower() == ".json":
         import json
+
         with open(path, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         columns = data.get("format", REQUIRED)
 
+        episodes = data.get("episodes", [])
+
+        if episodes:
+            if len(episodes[0]) != len(columns):
+                raise ValueError(
+                    f"JSON format has {len(columns)} columns, "
+                    f"but each episode contains "
+                    f"{len(episodes[0])} values."
+                )
+
         return (
             pd.DataFrame(
-                data.get("episodes", []),
+                episodes,
                 columns=columns
             ),
             data.get("parameters")
@@ -112,6 +126,38 @@ def summary(df, params):
     print(f"    Valid:               {int(df.exploit_valid_moves.sum()):,}")
     print(f"    Invalid rate:        {exploit_invalid_rate:.2f}%")
 
+    # ---------------------------------------------------------
+    # Consecutive invalid moves
+    # ---------------------------------------------------------
+
+    print("\nConsecutive invalid moves:")
+    print(
+        f"  Average:               "
+        f"{df.consecutive_invalid_moves.mean():.2f}"
+    )
+
+    print(
+        f"  Maximum recorded:      "
+        f"{int(df.consecutive_invalid_moves.max())}"
+    )
+
+    # ---------------------------------------------------------
+    # Invalid move cap
+    # ---------------------------------------------------------
+
+    cap_terminations = df.terminated_by_invalid_cap.sum()
+
+    print("\nInvalid move cap:")
+    print(
+        f"  Episodes terminated:   "
+        f"{int(cap_terminations):,}"
+    )
+
+    print(
+        f"  Termination rate:      "
+        f"{cap_terminations / len(df) * 100:.2f}%"
+    )
+
     print(f"\nFinal epsilon:           {df.epsilon.iloc[-1]:.6f}")
 
     # ---------------------------------------------------------
@@ -151,6 +197,8 @@ def chunk_analysis(df, chunks=10):
             f"avg score {part.total_score.mean():>8.1f} | "
             f"best {int(part.total_score.max()):>5} | "
             f"avg moves {part.ep_length.mean():>6.1f} | "
+            f"invalid {part.invalid_moves.mean():>6.1f} | "
+            f"cap {int(part.terminated_by_invalid_cap.sum()):>3} | "
             f"best tile {int(part.max_tile.max()):>4}"
         )
 
@@ -305,6 +353,7 @@ def make_plots(df, output_dir, window):
 
     plt.xlabel("Episode")
     plt.ylabel("Move Count")
+
     plt.title(
         f"2048 RL — Move Types "
         f"({window}-episode moving average)"
@@ -346,6 +395,7 @@ def make_plots(df, output_dir, window):
 
     plt.xlabel("Episode")
     plt.ylabel("Invalid moves")
+
     plt.title(
         f"2048 RL — Invalid Moves by Action Source "
         f"({window}-episode moving average)"
@@ -412,6 +462,79 @@ def make_plots(df, output_dir, window):
 
     plt.savefig(
         output_dir / "invalid_move_rate.png",
+        dpi=150
+    )
+
+    plt.close()
+
+    # ---------------------------------------------------------
+    # Consecutive invalid moves
+    # ---------------------------------------------------------
+
+    plt.figure(figsize=(12, 6))
+
+    plt.plot(
+        df.episode,
+        df.consecutive_invalid_moves,
+        alpha=0.35,
+        label="Consecutive invalid moves"
+    )
+
+    plt.plot(
+        df.episode,
+        df.consecutive_invalid_moves.rolling(
+            window,
+            min_periods=1
+        ).mean(),
+        linewidth=2,
+        label=f"{window}-episode moving average"
+    )
+
+    plt.xlabel("Episode")
+    plt.ylabel("Consecutive invalid moves")
+
+    plt.title(
+        f"2048 RL — Consecutive Invalid Moves "
+        f"({window}-episode moving average)"
+    )
+
+    plt.legend()
+    plt.tight_layout()
+
+    plt.savefig(
+        output_dir / "consecutive_invalid_moves.png",
+        dpi=150
+    )
+
+    plt.close()
+
+    # ---------------------------------------------------------
+    # Invalid cap terminations
+    # ---------------------------------------------------------
+
+    plt.figure(figsize=(12, 6))
+
+    plt.plot(
+        df.episode,
+        df.terminated_by_invalid_cap.rolling(
+            window,
+            min_periods=1
+        ).mean() * 100,
+        linewidth=2
+    )
+
+    plt.xlabel("Episode")
+    plt.ylabel("Termination rate (%)")
+
+    plt.title(
+        f"2048 RL — Invalid Cap Termination Rate "
+        f"({window}-episode moving average)"
+    )
+
+    plt.tight_layout()
+
+    plt.savefig(
+        output_dir / "invalid_cap_rate.png",
         dpi=150
     )
 
@@ -519,6 +642,7 @@ def main():
 
     summary(df, params)
     chunk_analysis(df)
+
     make_plots(
         df,
         args.output,

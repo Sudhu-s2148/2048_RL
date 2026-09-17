@@ -3,30 +3,82 @@ MY OBSERVATIONS?LEARNING OUTCOMES
 how can we change the observation state of the RL agent to make it learn better?
 what does it mean when the gradients shouldnt flow back in the target network
 
-TEST 001 - Random Policy Baseline
+TEST 000 - Random Policy Baseline
 Episodes: 100
 
 Average Score:        1182.04
 Average Episode Length: 151.90
 Average Max Tile:      111.68
 
-def update(self,batch,target_network):
-        gamma = 0.9
-        state = batch[:,0]
-        action = batch[:,1]
-        next_state = batch[:,2]
-        reward = batch[:,3]
-        done = batch[:,4]
+AGENT RUN 000:
+        test run with agent
 
-        Q_target_max = torch.max(target_network.forward(next_state),dim = 1).values
+        total_eps = 100
+        epsilon_decay = .99971
 
-        target_value = reward + (1-done)*gamma*Q_target_max
+        agent barely learn anything
+        -not enough epsiodes for it to learn from the experiences it has gained
 
-        q_values = self.forward(state)
-        row_indices = torch.arange(q_values.size(0))
-        predicted_value = q_values[row_indices,action]
-        loss = F.smooth_l1_loss(predicted_value,target_value)
+        increase the total_eps to 1000
 
-        self.optimizer.zero_grad()
-        loss.backward()
-        self.optimizer.step()
+AGENT RUN 001:
+        Vanilla DQN run 001-low total_eps and high decay
+
+        total_eps = 1000
+        epsilon_decay = .99973
+
+        agent was able to make a few merging moves but nothing after that
+        -realsied epsilon was hitting only .7 at the end of 1000 eps, not enough exploitation to truly learn
+
+        toggled epsilon from .99971 to .9973 to hit exploitation at ep >400
+
+AGENT RUN 002:
+        Vanilla DQN run 002-low total_eps
+
+        total_eps = 1000
+        epsilon_decay = .9973
+
+        agent learnt more than previous model but not substantial enough
+        -not enough learning--lack of experiences with 1000 eps
+
+        increased total_eps from 1000 to 5000
+        toggled epsilon from .9973 to .99943 to hit exploitation at ~4200 ep
+
+AGENT RUN 003;
+        Vanilla DQN-countless invalid moves
+
+        total_eps = 5000
+        epsilon_decay = .99943
+
+        agent has considerably learnt how to merge tiles and gain scores, very soon it started making many invalid moves
+        -agent has not been gaurd railed from making invalid moves, neither was there a punished given
+
+        reward shaped to reward-=1 only if it makes invalid moves, else reward = gained reward for that move_down
+
+AGENT RUN 004:
+        Vanilla DQN-stuck at tile 64
+
+        total_eps = 5000
+        epsilon_decay = .99943
+        reward = 0 if invalid move, else gained_reward
+
+        agent was able to reach until tile 64 but after a few moves it started making invalid moves once more
+        -speculated that model isnt able to grasp the complexity of the board once it hit tile 64
+
+        changed the network architecture from 16-64-64-64-4 to 16-64-128-64-4, potentially allowing it reach 128 more frequently
+
+AGENT RUN 005/006:
+        Vanilla DQN-stuck at tile 128
+
+        total_eps = 5000
+        epsilon_decay = .99943
+        reward = 0 if invalid move, else gained_reward
+        network_arch = 16-64-64-64-4 -> 16-64-128-64-4
+        
+        agent was able to reach until tile 128 but after a few moves it started making invalid moves once more, once again inevtiably
+        -speculating that without gaurd rails to prevent it from making invalid moves, process of it learning would be tedious
+        -2 options
+                -increase the training preiod
+                -add gaurd rails to prevent it from making invalid moves
+        
+        
