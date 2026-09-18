@@ -1,15 +1,15 @@
 {
-    "session": 4.2,
-    "episode": 20,
-    "total_episodes": 20,
+    "session": 4.3,
+    "episode": 10,
+    "total_episodes": 10,
     "epsilon": 0.09,
-    "score": 580,
-    "best_score": 2264,
-    "best_tile": 64,
-    "ep_length": 127,
-    "valid_moves": 81,
-    "invalid_moves": 46,
-    "merging_moves": 44,
-    "random_invalid_moves": 0,
-    "exploit_invalid_moves": 46
+    "score": 1120,
+    "best_score": 1440,
+    "best_tile": 128,
+    "ep_length": 355,
+    "valid_moves": 119,
+    "invalid_moves": 236,
+    "merging_moves": 64,
+    "random_invalid_moves": 12,
+    "exploit_invalid_moves": 224
 }
