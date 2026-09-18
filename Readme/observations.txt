@@ -60,7 +60,7 @@ AGENT RUN 004:
 
         total_eps = 5000
         epsilon_decay = .99943
-        reward = 0 if invalid move, else gained_reward
+        reward = -1 if invalid move, else gained_reward
 
         agent was able to reach until tile 64 but after a few moves it started making invalid moves once more
         -speculated that model isnt able to grasp the complexity of the board once it hit tile 64

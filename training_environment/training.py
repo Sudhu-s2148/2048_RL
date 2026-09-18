@@ -32,7 +32,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = 8
+    session = 4.2
 
     learning_rate = 0.0003
     weight_decay = 1e-4
@@ -116,7 +116,9 @@ async def main():
         return max
 
     ##########################################################################
-
+    consecutive_invalid_moves = 0
+    terminated_by_invalid_cap = 0
+    max_consecutive_invalid_moves = 0
     for episode in range(total_episodes):
         board = game.Board()
         board.spawn_number()
@@ -134,9 +136,7 @@ async def main():
         exploit_invalid_moves =0
         exploit_valid_moves = 0
 
-        consecutive_invalid_moves = 0
-        terminated_by_invalid_cap = 0
-        max_consecutive_invalid_moves = 0
+        
         done = board.game_state
         while done!=False:
 
@@ -163,10 +163,7 @@ async def main():
                 #print(current_state,next_state)
                 #print("invalid move")
                 reward-=1
-                consecutive_invalid_moves+=1
                 invalid_moves+=1
-                if consecutive_invalid_moves>max_consecutive_invalid_moves:
-                     max_consecutive_invalid_moves=consecutive_invalid_moves
                 if type == 1:
                     exploit_invalid_moves+=1
                 else:
@@ -186,9 +183,6 @@ async def main():
             board.is_game_over()
 
             done = board.game_state
-            if consecutive_invalid_moves >= 10:
-                 terminated_by_invalid_cap = 1
-                 done = True
 
             exp = [current_state,action,next_state,reward,done]
             replay_buffer.append(exp)

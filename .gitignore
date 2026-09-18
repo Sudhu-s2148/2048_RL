@@ -10,3 +10,4 @@ artifacts/
 .env
 analysis/
 status.json
+benchmark/

@@ -9,8 +9,8 @@ class Agent(nn.Module):
     def __init__(self,learning_rate,weight_decay):
         super(Agent,self).__init__()
         self.input = nn.Linear(16,64)
-        self.layer1 = nn.Linear(64,128)
-        self.layer2 = nn.Linear(128,64)
+        self.layer1 = nn.Linear(64,64)
+        self.layer2 = nn.Linear(64,64)
         self.output = nn.Linear(64,4)
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = weight_decay)
     def forward(self,x):
