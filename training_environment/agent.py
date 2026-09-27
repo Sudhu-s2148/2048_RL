@@ -2,6 +2,8 @@ import torch
 import random
 import torch.nn as nn
 import torch.nn.functional as F
+import game
+from helpers import state_gen, board_gen
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -19,12 +21,14 @@ class Agent(nn.Module):
         x = F.relu(self.layer2(x))
         x = self.output(x)
         return x
+
+    
     def choice(self,state,epsilon):
         state = torch.tensor(state, dtype=torch.float32).to(device)
         with torch.no_grad():
-            q_values = self.forward(state)
+            q_values = self.valid_actions(state,self.forward(state).tolist())
         #print("State:", state)
-        chosen = torch.argmax(q_values).item()
+        chosen = q_values.index(max(q_values))
         #print("Q-values:", q_values.cpu().detach().numpy())
         #print("Chosen:", chosen)
         #print(state)
@@ -33,6 +37,30 @@ class Agent(nn.Module):
         else:
             return int(chosen),1
 
+    def valid_actions(self,current_state,q_values):
+        current_state = current_state.tolist()
+        masking_board = game.Board()
+        neg_inf = float('-inf')
+        valid_action = [neg_inf for _ in range(4)]
+        actions = [masking_board.move_up,masking_board.move_left,masking_board.move_right,masking_board.move_down]
+        for id,fn in enumerate(actions):
+            masking_board.board_state = board_gen(current_state)
+            fn()
+            next_state = state_gen(masking_board.board_state)
+            """
+            test_state = board_gen(current_state)
+            round_trip = state_gen(test_state)
+
+            print(current_state)
+            print(round_trip)
+            print(current_state == round_trip)
+            """
+            if current_state != next_state:
+                valid_action[id] = 1
+        #print(type(valid_action), valid_action)
+        masked_values = [q_values[i] if valid_action[i] == 1 else valid_action[i] for i in range(4)]
+        return masked_values
+    
     def update(self,batch,target_network,gamma):
         state = torch.tensor([row[0] for row in batch]).to(device)
         action = torch.tensor([row[1] for row in batch]).to(device)

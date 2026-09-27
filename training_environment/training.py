@@ -2,6 +2,7 @@ import sys
 import asyncio
 import sys
 from pathlib import Path
+from helpers import state_gen, max_tile
 
 # This line stays EXACTLY as it is:
 
@@ -32,7 +33,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = 4.3
+    session = 9
 
     learning_rate = 0.0003
     weight_decay = 1e-4
@@ -92,37 +93,24 @@ async def main():
     save_path_csv = project_dir / "artifacts" / "output_data" / f"run_{session}.csv"
     save_path_json = project_dir / "artifacts" / "output_data" / f"run_{session}.json"
     save_path_discord = project_dir / "discord_manager" / "status.json"
+
     #setting up the network and other variables
     online_network = agent.Agent(learning_rate,weight_decay).to(device)
     replay_buffer = buffer.exp_buffer(10000)
     target_network = copy.deepcopy(online_network).to(device)
 
     #to genarate the flattened state with each tile value being the power of 2
-    def state_gen(board_state):
-        transposed =  [list(row) for row in zip(*board_state)]
-        reduced_board = [
-            [math.log2(val) if val!=0 else 0 for val in row ] 
-            for row in transposed
-        ]
-        flattened = torch.flatten(torch.tensor(reduced_board)).tolist()
-        return flattened
-
-    def max_tile(matrix):
-        max = matrix[0][0]
-        for i in matrix:
-            for j in i:
-                    if j>max:
-                        max = j
-        return max
-
+    #now in helpers.py
     ##########################################################################
     
     for episode in range(total_episodes):
         board = game.Board()
         board.spawn_number()
 
+        #telemetry variables reset
         steps = 0
 
+        greatest_tile_ever = 0
         valid_moves = 0
         invalid_moves = 0
         merging_moves = 0
@@ -137,15 +125,17 @@ async def main():
         consecutive_invalid_moves = 0
         terminated_by_invalid_cap = 0
         max_consecutive_invalid_moves = 0
-        
+
+        #game loop
         done = board.game_state
         while done!=False:
 
             current_state = state_gen(board.board_state)
             prev_score = board.score 
+
+            #action choice
             action,type  = online_network.choice(current_state,epsilon)
             #print("action:",action)
-
             if action == 0:
                 board.move_up()           
             elif action == 1:
@@ -155,6 +145,7 @@ async def main():
             elif action == 3:
                     board.move_down()
 
+            #reward calc
             next_state = state_gen(board.board_state)
             current_score = board.score
             reward = current_score-prev_score
@@ -165,15 +156,15 @@ async def main():
                 #print("invalid move")
                 reward-=1
                 invalid_moves+=1
-                consecutive_invalid_moves+=1
+                '''consecutive_invalid_moves+=1
                 if consecutive_invalid_moves>max_consecutive_invalid_moves:
-                     max_consecutive_invalid_moves=consecutive_invalid_moves
+                     max_consecutive_invalid_moves=consecutive_invalid_moves'''
                 if type == 1:
                     exploit_invalid_moves+=1
                 else:
                     random_invalid_moves+=1
             else:
-                consecutive_invalid_moves = 0
+                #consecutive_invalid_moves = 0
                 valid_moves+=1
                 if type == 1:
                     exploit_valid_moves+=1
@@ -183,19 +174,20 @@ async def main():
                 if reward == 0:
                     non_merging_valid_moves+=1
 
-            
             board.is_game_over()
 
             done = board.game_state
-            if consecutive_invalid_moves >= 10:
+            '''if consecutive_invalid_moves >= 10:
                  terminated_by_invalid_cap = 1
-                 done = True
+                 done = True'''
 
+            #buffer update
             exp = [current_state,action,next_state,reward,done]
             replay_buffer.append(exp)
 
             steps+=1
 
+            #updating weights
             if replay_buffer.len()>=batch_size:
                     train_batch = replay_buffer.sample(batch_size)
                     '''print(
@@ -225,6 +217,9 @@ async def main():
 
         )
 
+        #training data
+        if greatest_tile_ever<best_tile:
+             greatest_tile_ever = best_tile
         data["episodes"].append([
             episode,
             board.score,
@@ -244,6 +239,8 @@ async def main():
             epsilon
         ])
 
+
+        #discord data
         if best_score<board.score:
                 best_score = board.score
         if best_tile<max_tile(board.board_state):
@@ -267,17 +264,18 @@ async def main():
             json.dump(ep_data, file, indent=4)
 
 
-
+        #syncing the target network with online network
         if target_sync_count == target_sync:
             target_network = copy.deepcopy(online_network)
             target_sync_count = 0
 
-    data["best_tile"] = best_tile
+    data["best_tile"] = greatest_tile_ever
     data["best_score"] = best_score
 
-    print("best_tile:",best_tile)
+    print("best_tile:",greatest_tile_ever)
     print("best_score",best_score)
 
+    #saving final network,json,csv data files
     torch.save(online_network.state_dict(),save_path_network)
 
     with open(save_path_json, "w") as file:
@@ -290,6 +288,8 @@ async def main():
 
         for episode_data in data["episodes"]:
             writer.writerow(episode_data)
+
+    #cleaningly closing discord process
     try:
         await asyncio.wait_for(bot_process.wait(), timeout=30)
         print("Discord bot shut down gracefully. Training pipeline complete.")
