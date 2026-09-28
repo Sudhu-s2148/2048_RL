@@ -6,24 +6,13 @@ import pygame
 import torch
 import math
 import random
+import re
 
 parent_dir = Path(__file__).resolve().parent.parent
 if str(parent_dir) not in sys.path:
     sys.path.insert(0, str(parent_dir))
 import game
 
-import sys
-from pathlib import Path
-
-# Absolute path or relative path to the target directory
-target_dir = Path("C:/Users/sudha/Documents/2048_RL/training_environment").resolve()
-
-# Add to sys.path if not already present
-if str(target_dir) not in sys.path:
-    sys.path.insert(0, str(target_dir))
-
-# Import your module directly by filename (omit .py or .pyd)
-import agent
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -85,19 +74,26 @@ TILE_COLORS = {
 # ============================================================
 
 def state_gen(board_state):
-    transposed =  [list(row) for row in zip(*board_state)]
-    for row in board_state:
-        print(row)
+    transposed = [list(row) for row in zip(*board_state)]
     reduced_board = [
-        [math.log2(val) if val!=0 else 0 for val in row ] 
+        [math.log2(val) if val != 0 else 0 for val in row]
         for row in transposed
     ]
-    flattened = torch.flatten(torch.tensor(reduced_board)).tolist()
-    return flattened
+    return torch.flatten(
+        torch.tensor(reduced_board, dtype=torch.float32)
+    ).tolist()
+
+def board_gen(state):
+    reduced_board = [state[i:i + 4] for i in range(0, 16, 4)]
+    transposed_board = [
+        [2 ** value if value != 0 else 0 for value in row]
+        for row in reduced_board
+    ]
+    return [list(row) for row in zip(*transposed_board)]
 
 
 # ============================================================
-# DRAW TILE
+# STANDALONE NETWORK
 # ============================================================
 
 def draw_tile(screen, value, row, col, number_font):
@@ -317,21 +313,10 @@ def main():
     # LOAD TRAINED NETWORK
     # ========================================================
 
-    online_network = agent.Agent(
-        learning_rate=0.0003,
-        weight_decay=1e-4
-    ).to(device)
+    online_network = load_network(MODEL_PATH, device)
 
-    online_network.load_state_dict(
-        torch.load(
-            MODEL_PATH,
-            map_location="cpu"
-        )
-    )
     print("Loading from:", os.path.abspath(MODEL_PATH))
     print("File exists:", os.path.exists(MODEL_PATH))
-
-    online_network.eval()
 
 
     # ========================================================
@@ -379,16 +364,12 @@ def main():
                 board.board_state
             )
 
-            # epsilon = 0
-            # Completely greedy / exploitation
-            action = online_network.choice(
-                current_state,
-                0
-            )[0]
-            print(action)
-            '''
-            action = random.randint(0,3)'''
+            # Greedy action selection with valid-action masking.
+            action, q_values, masked_q_values = online_network.choice(current_state)
 
+            print("Q-values:", q_values)
+            print("Masked Q-values:", masked_q_values)
+            print("Chosen action:", action)
 
             # ------------------------------------------------
             # Execute action

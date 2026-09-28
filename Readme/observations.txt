@@ -82,3 +82,28 @@ AGENT RUN 005/006:
                 -add gaurd rails to prevent it from making invalid moves
         
         
+Network 4
+├── Architecture: 16-64-64-64-4
+├── 5000 episodes
+└── -1 invalid-move penalty
+
+Network 4.2
+├── Architecture: 16-64-64-64-4
+├── 10000 episodes
+└── Same settings as Network 4
+
+Network 4.3
+├── Architecture: 16-64-64-64-4
+├── 10000 episodes
+├── Same as Network 4.2
+└── + terminate after 10 consecutive invalid moves
+
+Network 8
+├── Architecture: 16-64-128-64-4
+├── 10000 episodes
+└── + consecutive-invalid termination cap
+
+Network 9
+-arch:16-64-64-64-4
+-10000 eps
+-action masking

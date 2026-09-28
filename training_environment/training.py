@@ -2,7 +2,7 @@ import sys
 import asyncio
 import sys
 from pathlib import Path
-from helpers import state_gen, max_tile
+
 
 # This line stays EXACTLY as it is:
 
@@ -18,7 +18,7 @@ import agent, buffer
 import copy
 import math
 import csv,json
-
+from helpers import state_gen, max_tile
 
 
 #########################################################################
@@ -33,7 +33,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = 9
+    session = 10
 
     learning_rate = 0.0003
     weight_decay = 1e-4

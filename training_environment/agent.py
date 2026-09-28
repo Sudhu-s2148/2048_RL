@@ -3,7 +3,7 @@ import random
 import torch.nn as nn
 import torch.nn.functional as F
 import game
-from helpers import state_gen, board_gen
+from helpers import state_gen, board_gen, valid_actions
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -26,8 +26,9 @@ class Agent(nn.Module):
     def choice(self,state,epsilon):
         state = torch.tensor(state, dtype=torch.float32).to(device)
         with torch.no_grad():
-            q_values = self.valid_actions(state,self.forward(state).tolist())
+            q_values = valid_actions(state,self.forward(state).tolist())
         #print("State:", state)
+        #print(q_values)
         chosen = q_values.index(max(q_values))
         #print("Q-values:", q_values.cpu().detach().numpy())
         #print("Chosen:", chosen)
@@ -37,29 +38,7 @@ class Agent(nn.Module):
         else:
             return int(chosen),1
 
-    def valid_actions(self,current_state,q_values):
-        current_state = current_state.tolist()
-        masking_board = game.Board()
-        neg_inf = float('-inf')
-        valid_action = [neg_inf for _ in range(4)]
-        actions = [masking_board.move_up,masking_board.move_left,masking_board.move_right,masking_board.move_down]
-        for id,fn in enumerate(actions):
-            masking_board.board_state = board_gen(current_state)
-            fn()
-            next_state = state_gen(masking_board.board_state)
-            """
-            test_state = board_gen(current_state)
-            round_trip = state_gen(test_state)
 
-            print(current_state)
-            print(round_trip)
-            print(current_state == round_trip)
-            """
-            if current_state != next_state:
-                valid_action[id] = 1
-        #print(type(valid_action), valid_action)
-        masked_values = [q_values[i] if valid_action[i] == 1 else valid_action[i] for i in range(4)]
-        return masked_values
     
     def update(self,batch,target_network,gamma):
         state = torch.tensor([row[0] for row in batch]).to(device)
@@ -75,8 +54,19 @@ class Agent(nn.Module):
             reward.shape,
             done.shape
         )'''
+        vmap_valid_actions = torch.vmap(valid_actions, in_dims=(0, 0))
         with torch.no_grad():
-            Q_target_max = torch.max(target_network.forward(next_state),dim = 1).values
+            raw_target_q = target_network(next_state) # Shape: (B, 4)
+            # Enforce valid_actions on each sample in the batch
+            masked_target_q_list = [
+                valid_actions(ns, q_val) 
+                for ns, q_val in zip(next_state, raw_target_q)
+            ]
+            
+            # Convert list of 1D tensors/lists back into a 2D Tensor of shape (B, 4)
+            target_q_values = torch.tensor(masked_target_q_list, device=next_state.device, dtype=next_state.dtype)
+            #print(target_q_values.tolist())
+            Q_target_max = torch.max(target_q_values,dim = 1).values
 
         target_value = reward + (1-done)*gamma*Q_target_max
 
