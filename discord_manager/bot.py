@@ -52,7 +52,7 @@ async def run_analysis_and_send(channel):
         await channel.send(f"❌ Failed to read `status.json`: {e}")
         return
 
-    json_path = os.path.join(PARENT_DIR, "artifacts", "output_data", f"run_{session}.json")
+    json_path = os.path.join(PARENT_DIR, "artifacts", "MTL_DQN", "output_data", f"run_{session}.json")
 
     for old_file in glob.glob(os.path.join(analysis_dir, "*.png")):
         try:

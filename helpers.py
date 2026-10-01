@@ -30,16 +30,16 @@ def max_tile(matrix):
                 if j>max:
                     max = j
     return max
-def valid_actions(current_state,q_values):
-        current_state = current_state.tolist()
+def valid_actions(current_state):
+        current_state = current_state
         masking_board = game.Board()
-        neg_inf = float('-inf')
-        valid_action = [neg_inf for _ in range(4)]
+        valid_action = [0 for _ in range(4)]
         actions = [masking_board.move_up,masking_board.move_left,masking_board.move_right,masking_board.move_down]
         for id,fn in enumerate(actions):
             masking_board.board_state = board_gen(current_state)
             fn()
             next_state = state_gen(masking_board.board_state)
+
             """
             test_state = board_gen(current_state)
             round_trip = state_gen(test_state)
@@ -48,8 +48,7 @@ def valid_actions(current_state,q_values):
             print(round_trip)
             print(current_state == round_trip)
             """
+
             if current_state != next_state:
                 valid_action[id] = 1
-        #print(type(valid_action), valid_action)
-        masked_values = [q_values[i] if valid_action[i] == 1 else valid_action[i] for i in range(4)]
-        return masked_values
+        return valid_action
