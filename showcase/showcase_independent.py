@@ -21,7 +21,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # SETTINGS
 # ============================================================
 
-MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_9.pth"
+MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/MTL_DQN/checkpoints/network_1.pth"
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 650
