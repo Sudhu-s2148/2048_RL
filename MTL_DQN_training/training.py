@@ -33,7 +33,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = 1.1
+    session = 1.2
 
     learning_rate = 0.0003
     weight_decay = 1e-4

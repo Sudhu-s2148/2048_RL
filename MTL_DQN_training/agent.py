@@ -74,7 +74,7 @@ class Agent(nn.Module):
 
     
     def update(self,batch,target_network,gamma):
-        lambda_v = 0.5
+        lambda_v = 0.7
         state = torch.tensor([row[0] for row in batch],dtype = torch.float32,device=device)
         action = torch.tensor([row[1] for row in batch],dtype = torch.long,device=device)
         next_state = torch.tensor([row[2] for row in batch],dtype = torch.float32,device=device)
