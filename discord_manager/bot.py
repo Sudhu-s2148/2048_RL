@@ -130,6 +130,7 @@ async def on_message(message):
     total_episodes = status.get("total_episodes", "?")
     await message.channel.send(
         f"📊 **Training Status**\n"
+        f"Run:{status['current_run']}/{status['total_runs']}\n"
         f"Episode: {status['episode']} / {status['total_episodes']}\n"
         f"Current score: {status['score']}\n"
         f"Best score: {status['best_score']}\n"

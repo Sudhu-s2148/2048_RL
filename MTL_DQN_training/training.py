@@ -3,10 +3,6 @@ import asyncio
 import sys
 from pathlib import Path
 
-
-# This line stays EXACTLY as it is:
-
-
 project_dir = Path(__file__).resolve().parent.parent
 if str(project_dir) not in sys.path:
     sys.path.insert(0, str(project_dir))
@@ -19,6 +15,7 @@ import copy
 import random
 import csv,json
 import numpy as np
+import argparse
 from helpers import state_gen, max_tile, valid_actions
 
 def set_seed(seed):
@@ -28,6 +25,12 @@ def set_seed(seed):
 
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--session", type=str, default="404")
+args = parser.parse_args()
 
 
 #########################################################################
@@ -42,7 +45,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = '1.1.2'
+    session = args.session
 
     learning_rate = 0.0003
     weight_decay = 1e-4
@@ -50,6 +53,7 @@ async def main():
     episode = 0
     total_steps = 0
     target_sync_count = 0
+    sync = False
 
     total_episodes = 10000
     batch_size = 64
@@ -62,6 +66,11 @@ async def main():
 
     best_tile = 0
     best_score = 0
+
+    with open("run.json","r") as file:
+        data = json.load(file)
+    current_run = data["current_run"]
+    total_runs = data["total_runs"]
 
     #########################################################################
     data = {}
@@ -104,8 +113,7 @@ async def main():
     save_path_discord = project_dir / "discord_manager" / "status.json"
 
     #setting up the network and other variables
-    seed = 42  # Change this for each independent training run
-    set_seed(seed)
+    seed = args.seed
 
     online_network = agent.Agent(learning_rate,weight_decay).to(device)
     replay_buffer = buffer.exp_buffer(10000)
@@ -219,6 +227,8 @@ async def main():
                     online_network.update(train_batch,target_network,gamma)
 
             target_sync_count+=1
+            if target_sync_count == target_sync:
+                sync = True
 
         epsilon = max(epsilon * epsilon_decay, epsilon_min)
 
@@ -267,7 +277,8 @@ async def main():
 
 
         
-
+        ep_data["current_run"] = current_run
+        ep_data["total_runs"] = total_runs
         ep_data["session"] = session
         ep_data["episode"] = episode+1
         ep_data["total_episodes"] = total_episodes
@@ -287,9 +298,10 @@ async def main():
 
 
         #syncing the target network with online network
-        if target_sync_count == target_sync:
+        if sync:
             target_network = copy.deepcopy(online_network)
             target_sync_count = 0
+            sync = False
 
     data["best_tile"] = greatest_tile_ever
     data["best_score"] = best_score
