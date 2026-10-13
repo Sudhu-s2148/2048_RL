@@ -16,9 +16,18 @@ import game
 import torch
 import agent, buffer
 import copy
-import math
+import random
 import csv,json
+import numpy as np
 from helpers import state_gen, max_tile, valid_actions
+
+def set_seed(seed):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
 
 
 #########################################################################
@@ -33,7 +42,7 @@ async def main():
     )
     print("Discord bot running in background...")
 
-    session = 1.2
+    session = '1.1.2'
 
     learning_rate = 0.0003
     weight_decay = 1e-4
@@ -95,6 +104,9 @@ async def main():
     save_path_discord = project_dir / "discord_manager" / "status.json"
 
     #setting up the network and other variables
+    seed = 42  # Change this for each independent training run
+    set_seed(seed)
+
     online_network = agent.Agent(learning_rate,weight_decay).to(device)
     replay_buffer = buffer.exp_buffer(10000)
     target_network = copy.deepcopy(online_network).to(device)
