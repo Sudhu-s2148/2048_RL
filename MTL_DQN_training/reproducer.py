@@ -12,7 +12,9 @@ BENCHMARKIN_SCRIPT = SCRIPT_DIR.parent/"benchmark"/"benchmark_mtl.py"
 # Edit these entries to choose which experiments to run.
 # Each run has a distinct seed and session name.
 RUNS = [
-    {"seed": 44, "session": "1.1.3.2"},
+    {"seed": 44, "session": "2.1"},
+    {"seed": 45, "session": "2.2"},
+    {"seed": 46, "session": "2.3"}
 ]
 
 parser = argparse.ArgumentParser()

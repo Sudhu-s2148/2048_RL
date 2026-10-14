@@ -15,6 +15,7 @@ class Agent(nn.Module):
         self.layer1 = nn.Linear(64,64)
         self.layer2 = nn.Linear(64,64)
         self.Q_output = nn.Linear(64,4)
+        self.V_layer = nn.Linear(64,64)
         self.V_output = nn.Linear(64,4)
         self.optimizer = torch.optim.AdamW(self.parameters(), lr=learning_rate,weight_decay = weight_decay)
 
@@ -23,7 +24,8 @@ class Agent(nn.Module):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
         Q = self.Q_output(x)
-        raw_V = self.V_output(x)
+        V_layer = F.relu(self.V_layer(x))
+        raw_V = self.V_output(V_layer)
 
         return Q,raw_V
 

@@ -28,7 +28,7 @@ def set_seed(seed):
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--seed", type=int, default=42)
+parser.add_argument("--seed", type=int, default=44)
 parser.add_argument("--session", type=str, default="404")
 parser.add_argument("--total_episodes",type=int,default = 10)
 args = parser.parse_args()
