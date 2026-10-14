@@ -16,7 +16,7 @@ import sys
 from pathlib import Path
 
 # Absolute path or relative path to the target directory
-target_dir = Path("C:/Users/sudha/Documents/2048_RL/training_environment").resolve()
+target_dir = Path("C:/Users/sudha/Documents/2048_RL/vanilla_DQN_training").resolve()
 
 # Add to sys.path if not already present
 if str(target_dir) not in sys.path:
@@ -32,7 +32,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # SETTINGS
 # ============================================================
 
-MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/checkpoints/network_9.pth"
+MODEL_PATH = r"C:/Users/sudha/Documents/2048_RL/artifacts/VANILLA_DQN/checkpoints/network_9.pth"
 
 WINDOW_WIDTH = 500
 WINDOW_HEIGHT = 650

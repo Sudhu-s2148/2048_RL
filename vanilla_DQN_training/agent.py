@@ -23,23 +23,32 @@ class Agent(nn.Module):
         return x
 
     
-    def choice(self,state,epsilon):
-        state = torch.tensor(state, dtype=torch.float32).to(device)
+    def choice(self, state, epsilon):
+        # valid_actions(state) returns a 4-element mask in action order:
+        # [up, left, right, down].
+        state_tensor = torch.as_tensor(state, dtype=torch.float32, device=device)
+
         with torch.no_grad():
-            q_values = valid_actions(state,self.forward(state).tolist())
-        #print("State:", state)
-        #print(q_values)
-        chosen = q_values.index(max(q_values))
-        #print("Q-values:", q_values.cpu().detach().numpy())
-        #print("Chosen:", chosen)
-        #print(state)
-        if random.random()<epsilon:
-            return random.randint(0,3),0
-        else:
-            return int(chosen),1
+            q_values = self.forward(state_tensor)
+            validity = torch.as_tensor(
+                valid_actions(state_tensor.tolist()),
+                dtype=torch.bool,
+                device=q_values.device
+            )
+
+            if validity.any():
+                masked_q_values = q_values.masked_fill(~validity, -torch.inf)
+                valid_indices = torch.where(validity)[0]
+
+                if random.random() < epsilon:
+                    return int(random.choice(valid_indices.tolist())), 0
+
+                return int(torch.argmax(masked_q_values).item()), 1
+
+            # No legal moves (normally the game should already be over).
+            return 0, 1
 
 
-    
     def update(self,batch,target_network,gamma):
         state = torch.tensor([row[0] for row in batch]).to(device)
         action = torch.tensor([row[1] for row in batch]).to(device)
@@ -54,19 +63,27 @@ class Agent(nn.Module):
             reward.shape,
             done.shape
         )'''
-        vmap_valid_actions = torch.vmap(valid_actions, in_dims=(0, 0))
         with torch.no_grad():
-            raw_target_q = target_network(next_state) # Shape: (B, 4)
-            # Enforce valid_actions on each sample in the batch
-            masked_target_q_list = [
-                valid_actions(ns, q_val) 
-                for ns, q_val in zip(next_state, raw_target_q)
-            ]
-            
-            # Convert list of 1D tensors/lists back into a 2D Tensor of shape (B, 4)
-            target_q_values = torch.tensor(masked_target_q_list, device=next_state.device, dtype=next_state.dtype)
-            #print(target_q_values.tolist())
-            Q_target_max = torch.max(target_q_values,dim = 1).values
+            raw_target_q = target_network(next_state)  # Shape: (B, 4)
+            masked_target_q_list = []
+
+            for ns, q_values in zip(next_state, raw_target_q):
+                validity = torch.as_tensor(
+                    valid_actions(ns.tolist()),
+                    dtype=torch.bool,
+                    device=q_values.device
+                )
+
+                if validity.any():
+                    masked_q = q_values.masked_fill(~validity, -torch.inf)
+                else:
+                    # No legal actions: use a zero bootstrap value to avoid NaNs.
+                    masked_q = torch.zeros_like(q_values)
+
+                masked_target_q_list.append(masked_q)
+
+            target_q_values = torch.stack(masked_target_q_list)
+            Q_target_max = torch.max(target_q_values, dim=1).values
 
         target_value = reward + (1-done)*gamma*Q_target_max
 

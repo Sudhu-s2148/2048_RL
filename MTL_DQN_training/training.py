@@ -30,6 +30,7 @@ def set_seed(seed):
 parser = argparse.ArgumentParser()
 parser.add_argument("--seed", type=int, default=42)
 parser.add_argument("--session", type=str, default="404")
+parser.add_argument("--total_episodes",type=int,default = 10)
 args = parser.parse_args()
 
 
@@ -55,7 +56,7 @@ async def main():
     target_sync_count = 0
     sync = False
 
-    total_episodes = 10000
+    total_episodes = args.total_episodes
     batch_size = 64
     target_sync = 1000
 
