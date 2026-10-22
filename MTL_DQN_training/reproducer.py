@@ -7,15 +7,16 @@ import argparse
 # Assumes reproducer.py and training.py are in the same directory.
 SCRIPT_DIR = Path(__file__).resolve().parent
 TRAINING_SCRIPT = SCRIPT_DIR / "training.py"
-BENCHMARKIN_SCRIPT = SCRIPT_DIR.parent/"benchmark"/"benchmark_mtl.py"
+BENCHMARKIN_SCRIPT = SCRIPT_DIR.parent/"benchmark"/"benchmark_mtl_diagnostics.py"
 
 # Edit these entries to choose which experiments to run.
 # Each run has a distinct seed and session name.
 RUNS = [
-    {"seed": 44, "session": "2.1"},
-    {"seed": 45, "session": "2.2"},
-    {"seed": 46, "session": "2.3"}
+    {"seed": 42, "session": "3.1"},
+    {"seed": 43, "session": "3.2"},
+    {"seed": 44, "session": "3.3"}
 ]
+
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--total_episodes",type=int,default = 10)

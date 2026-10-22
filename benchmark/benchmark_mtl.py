@@ -29,7 +29,7 @@ BENCHMARK_NETWORKS = args.networks
 # "none"        -> use raw Q-values, no validity mask
 # "environment" -> use the environment's true validity mask
 # "learned"     -> use the MTL network's learned validity head
-MASK_MODE = "environment"
+MASK_MODE = "learned"
 MODES = ["none", "environment", "learned"]
 
 if MASK_MODE not in MODES:
@@ -411,97 +411,97 @@ async def main():
         if network.is_mtl:
             print(f"Action mask: {MASK_MODE}")
 
-        for MASK_MODE in MODES:
-            print("\n" + "=" * 70)
-            print(f"Benchmarking: {checkpoint_path.name}")
-            print("=" * 70)
+        
+        print("\n" + "=" * 70)
+        print(f"Benchmarking: {checkpoint_path.name}")
+        print("=" * 70)
 
-            invalid_terminations = 0
-            game_over_terminations = 0
-            total_fallbacks = 0
-            total_validity_correct = 0
-            total_validity_predictions = 0
-            scores = []
+        invalid_terminations = 0
+        game_over_terminations = 0
+        total_fallbacks = 0
+        total_validity_correct = 0
+        total_validity_predictions = 0
+        scores = []
 
-            for episode in range(TOTAL_EPISODES):
-                result = play_episode(network)
-                scores.append(result["score"])
+        for episode in range(TOTAL_EPISODES):
+            result = play_episode(network)
+            scores.append(result["score"])
 
-                total_fallbacks += result["validity_fallbacks"]
-                total_validity_correct += result["validity_correct"]
-                total_validity_predictions += result["validity_total"]
+            total_fallbacks += result["validity_fallbacks"]
+            total_validity_correct += result["validity_correct"]
+            total_validity_predictions += result["validity_total"]
 
-                if result["termination"] == "invalid_move":
-                    invalid_terminations += 1
-                else:
-                    game_over_terminations += 1
+            if result["termination"] == "invalid_move":
+                invalid_terminations += 1
+            else:
+                game_over_terminations += 1
 
-                print(
-                    f"Episode {episode + 1:4d} | "
-                    f"Score: {result['score']:6d} | "
-                    f"Max tile: {result['max_tile']:4d} | "
-                    f"Steps: {result['steps']:4d} | "
-                    f"Fallbacks: {result['validity_fallbacks']:3d} | "
-                    f"Ended: {result['termination']}"
-                )
-
-                benchmark_rows.append([
-                    checkpoint_path.name,
-                    episode,
-                    result["score"],
-                    result["max_tile"],
-                    result["steps"],
-                    result["termination"],
-                    result["validity_fallbacks"],
-                    result["validity_correct"],
-                    result["validity_total"]
-                ])
-
-            print(f"\n{checkpoint_path.name} summary:")
-            print(f"  Model type:                {model_type}")
-            print(f"  Average score:             {sum(scores) / len(scores):.2f}")
-            print(f"  Best score:                {max(scores)}")
-            print(f"  Invalid terminations:      {invalid_terminations}")
-            print(f"  Game-over terminations:    {game_over_terminations}")
-
-            if network.is_mtl and MASK_MODE == "learned":
-                validity_accuracy = (
-                    total_validity_correct / total_validity_predictions
-                    if total_validity_predictions
-                    else 0.0
-                )
-
-                print(f"  Validity accuracy:         {validity_accuracy * 100:.2f}%")
-                print(f"  Validity fallbacks:        {total_fallbacks}")
-                print(f" my valdity accuracy:        {validity_percentage(total_masks,accurate_mtl_mask)}")
-
-            save_path_csv = (
-                output_dir / f"mtl_benchmark_{checkpoint_path.name}_{MASK_MODE}.csv"
+            print(
+                f"Episode {episode + 1:4d} | "
+                f"Score: {result['score']:6d} | "
+                f"Max tile: {result['max_tile']:4d} | "
+                f"Steps: {result['steps']:4d} | "
+                f"Fallbacks: {result['validity_fallbacks']:3d} | "
+                f"Ended: {result['termination']}"
             )
 
-            with open(save_path_csv, "w", newline="") as file:
-                writer = csv.writer(file)
+            benchmark_rows.append([
+                checkpoint_path.name,
+                episode,
+                result["score"],
+                result["max_tile"],
+                result["steps"],
+                result["termination"],
+                result["validity_fallbacks"],
+                result["validity_correct"],
+                result["validity_total"]
+            ])
 
-                writer.writerow([
-                    "network",
-                    "episode",
-                    "score",
-                    "max_tile",
-                    "steps",
-                    "termination",
-                    "validity_fallbacks",
-                    "validity_correct",
-                    "validity_total"
-                ])
+        print(f"\n{checkpoint_path.name} summary:")
+        print(f"  Model type:                {model_type}")
+        print(f"  Average score:             {sum(scores) / len(scores):.2f}")
+        print(f"  Best score:                {max(scores)}")
+        print(f"  Invalid terminations:      {invalid_terminations}")
+        print(f"  Game-over terminations:    {game_over_terminations}")
 
-                writer.writerows(benchmark_rows)
+        if network.is_mtl and MASK_MODE == "learned":
+            validity_accuracy = (
+                total_validity_correct / total_validity_predictions
+                if total_validity_predictions
+                else 0.0
+            )
 
-            last_save_path = save_path_csv
+            print(f"  Validity accuracy:         {validity_accuracy * 100:.2f}%")
+            print(f"  Validity fallbacks:        {total_fallbacks}")
+            print(f" my valdity accuracy:        {validity_percentage(total_masks,accurate_mtl_mask)}")
 
-            print("\n" + "=" * 70)
-            print("Benchmark complete.")
-            print(f"Results saved to: {last_save_path}")
-            print("=" * 70)
+        save_path_csv = (
+            output_dir / f"mtl_benchmark_{checkpoint_path.name}_mtlmask.csv"
+        )
+
+        with open(save_path_csv, "w", newline="") as file:
+            writer = csv.writer(file)
+
+            writer.writerow([
+                "network",
+                "episode",
+                "score",
+                "max_tile",
+                "steps",
+                "termination",
+                "validity_fallbacks",
+                "validity_correct",
+                "validity_total"
+            ])
+
+            writer.writerows(benchmark_rows)
+
+        last_save_path = save_path_csv
+
+        print("\n" + "=" * 70)
+        print("Benchmark complete.")
+        print(f"Results saved to: {last_save_path}")
+        print("=" * 70)
 
 
 if __name__ == "__main__":

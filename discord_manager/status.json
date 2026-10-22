@@ -1,17 +1,17 @@
 {
-    "current_run": 3,
-    "total_runs": 3,
-    "session": "2.3",
+    "current_run": 1,
+    "total_runs": 1,
+    "session": "404",
     "episode": 20,
     "total_episodes": 20,
     "epsilon": 0.09,
-    "score": 608,
-    "best_score": 1952,
+    "score": 872,
+    "best_score": 2308,
     "best_tile": 64,
-    "ep_length": 119,
-    "valid_moves": 85,
-    "invalid_moves": 34,
-    "merging_moves": 44,
-    "random_invalid_moves": 1,
-    "exploit_invalid_moves": 33
+    "ep_length": 193,
+    "valid_moves": 105,
+    "invalid_moves": 88,
+    "merging_moves": 60,
+    "random_invalid_moves": 2,
+    "exploit_invalid_moves": 86
 }
