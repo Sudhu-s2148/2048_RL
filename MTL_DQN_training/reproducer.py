@@ -12,9 +12,9 @@ BENCHMARKIN_SCRIPT = SCRIPT_DIR.parent/"benchmark"/"benchmark_mtl_diagnostics.py
 # Edit these entries to choose which experiments to run.
 # Each run has a distinct seed and session name.
 RUNS = [
-    {"seed": 42, "session": "3.1"},
-    {"seed": 43, "session": "3.2"},
-    {"seed": 44, "session": "3.3"}
+    {"seed": 42, "session": "4.2.1"},
+    {"seed": 43, "session": "4.2.2"},
+    {"seed": 44, "session": "4.2.3"}
 ]
 
 
