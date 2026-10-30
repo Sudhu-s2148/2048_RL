@@ -43,7 +43,7 @@ def collect_summary_paths(inputs, output_dir):
     for item in inputs:
         item = Path(item)
         if item.is_dir():
-            summary_path = item / "benchmark_summary.csv"
+            summary_path = item / "benchmark_summary_1.csv"
             if summary_path.exists():
                 paths.append(summary_path)
             else:

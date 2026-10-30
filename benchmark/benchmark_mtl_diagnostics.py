@@ -29,12 +29,16 @@ VALID_MODES = set(DEFAULT_MODES)
 
 
 class BenchmarkNetwork(nn.Module):
-    """Reconstruct a vanilla DQN or either version of the MTL network."""
+    """Reconstruct supported DQN/MTL checkpoints from their state_dict keys."""
 
     def __init__(self, state_dict):
         super().__init__()
         self.is_mtl = "V_output.weight" in state_dict
-        self.has_extra_validity_layer = "V_layer.weight" in state_dict
+        self.q_hidden_names = self._hidden_names(state_dict, "Q") if self.is_mtl else []
+        self.v_hidden_names = self._hidden_names(state_dict, "V") if self.is_mtl else []
+        self.has_two_validity_layers = len(self.v_hidden_names) == 2
+        self.has_extra_validity_layer = bool(self.v_hidden_names)
+        self.q_from_trunk = self.is_mtl and not self.q_hidden_names
 
         if self.is_mtl:
             self.input = self._make_linear(state_dict, "input")
@@ -43,13 +47,20 @@ class BenchmarkNetwork(nn.Module):
             self.Q_output = self._make_linear(state_dict, "Q_output")
             self.V_output = self._make_linear(state_dict, "V_output")
 
-            if self.has_extra_validity_layer:
-                self.V_layer = self._make_linear(state_dict, "V_layer")
-
             for name in ["input", "layer1", "layer2", "Q_output", "V_output"]:
                 self._copy_linear(getattr(self, name), state_dict, name)
-            if self.has_extra_validity_layer:
-                self._copy_linear(self.V_layer, state_dict, "V_layer")
+
+            for name in self.q_hidden_names + self.v_hidden_names:
+                layer = self._make_linear(state_dict, name)
+                setattr(self, name, layer)
+                self._copy_linear(layer, state_dict, name)
+
+            # Reject checkpoints containing layers we cannot safely reconstruct.
+            known = {"input", "layer1", "layer2", "Q_output", "V_output"}
+            known.update(self.q_hidden_names + self.v_hidden_names)
+            unexpected = {k.rsplit(".", 1)[0] for k in state_dict if k.endswith((".weight", ".bias"))} - known
+            if unexpected:
+                raise ValueError(f"Unsupported MTL layers: {sorted(unexpected)}")
         else:
             weights = [
                 (key, value)
@@ -80,6 +91,31 @@ class BenchmarkNetwork(nn.Module):
             self.network = nn.Sequential(*layers)
 
     @staticmethod
+    def _hidden_names(state_dict, prefix):
+        # Supports no hidden layer, a legacy *_layer, or numbered *_layer_1, *_layer_2, ...
+        legacy = f"{prefix}_layer"
+        numbered = []
+        for key in state_dict:
+            match = re.fullmatch(rf"{prefix}_layer_(\d+)\.weight", key)
+            if match:
+                numbered.append((int(match.group(1)), key[:-7]))
+        numbered.sort()
+        if f"{legacy}.weight" in state_dict and numbered:
+            raise ValueError(f"Ambiguous {prefix} hidden layers")
+        if numbered:
+            indices = [n for n, _ in numbered]
+            if indices != list(range(1, len(indices) + 1)):
+                raise ValueError(f"Non-contiguous {prefix} hidden layers: {indices}")
+            return [name for _, name in numbered]
+        return [legacy] if f"{legacy}.weight" in state_dict else []
+
+    @property
+    def architecture(self):
+        if not self.is_mtl:
+            return "Vanilla DQN"
+        return f"MTL: {len(self.q_hidden_names)} Q hidden layer(s) + {len(self.v_hidden_names)} V hidden layer(s)"
+
+    @staticmethod
     def _make_linear(state_dict, name):
         weight = state_dict[f"{name}.weight"]
         return nn.Linear(weight.shape[1], weight.shape[0])
@@ -96,15 +132,15 @@ class BenchmarkNetwork(nn.Module):
         x = torch.relu(self.input(state))
         x = torch.relu(self.layer1(x))
         x = torch.relu(self.layer2(x))
-        q = self.Q_output(x)
+        q_features = x
+        for name in self.q_hidden_names:
+            q_features = torch.relu(getattr(self, name)(q_features))
+        q = self.Q_output(q_features)
 
-        # Older checkpoints use the shared trunk directly.
-        # Newer checkpoints have a dedicated extra layer in the validity branch.
-        if self.has_extra_validity_layer:
-            validity_features = torch.relu(self.V_layer(x))
-            raw_v = self.V_output(validity_features)
-        else:
-            raw_v = self.V_output(x)
+        validity_features = x
+        for name in self.v_hidden_names:
+            validity_features = torch.relu(getattr(self, name)(validity_features))
+        raw_v = self.V_output(validity_features)
 
         return q, raw_v
 
@@ -267,13 +303,7 @@ def summarize(checkpoint_name, model, mode, rows):
 
     return {
         "network": checkpoint_name,
-        "architecture": (
-            "MTL + extra V layer"
-            if model.is_mtl and model.has_extra_validity_layer
-            else "MTL original"
-            if model.is_mtl
-            else "Vanilla DQN"
-        ),
+        "architecture": model.architecture,
         "mask_mode": mode,
         "episodes": len(rows),
         "average_score": statistics.mean(scores),
@@ -315,6 +345,10 @@ def main():
         "--networks", nargs="*", default=None,
         help="Checkpoint names with or without .pth. Omit to benchmark all checkpoints."
     )
+    parser.add_argument(
+        "--checkpoint-path", type=Path, default=None,
+        help="Optional direct path to a checkpoint outside the default checkpoints folder."
+    )
     parser.add_argument("--episodes", type=int, default=1000)
     parser.add_argument(
         "--modes", nargs="+", choices=DEFAULT_MODES, default=DEFAULT_MODES,
@@ -334,8 +368,14 @@ def main():
     output_dir = PROJECT_DIR / "benchmark"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    checkpoint_paths = sorted(checkpoint_dir.glob("*.pth"))
+    checkpoint_paths = (
+        [args.checkpoint_path.expanduser().resolve()]
+        if args.checkpoint_path is not None
+        else sorted(checkpoint_dir.glob("*.pth"))
+    )
     if args.networks:
+        if args.checkpoint_path is not None:
+            parser.error("Use either --checkpoint-path or --networks, not both")
         requested = set(args.networks)
         requested_with_ext = {
             name if name.lower().endswith(".pth") else f"{name}.pth"
@@ -367,13 +407,7 @@ def main():
 
     for checkpoint_path in checkpoint_paths:
         model = load_network(checkpoint_path, device)
-        architecture = (
-            "MTL + extra V layer"
-            if model.is_mtl and model.has_extra_validity_layer
-            else "MTL original"
-            if model.is_mtl
-            else "Vanilla DQN"
-        )
+        architecture = model.architecture
 
         modes = args.modes if model.is_mtl else ["none"]
         for mode in modes:
@@ -426,7 +460,7 @@ def main():
             ]:
                 value = summary[key]
                 if isinstance(value, float):
-                    if key.endswith("_pct") or key.endswith("_rate") or key.startswith("validity_"):
+                    if key.endswith("_pct") or key.endswith("_rate") or key in {"validity_accuracy", "validity_precision", "validity_recall"}:
                         print(f"  {key}: {value * 100:.2f}%")
                     else:
                         print(f"  {key}: {value:.2f}")
