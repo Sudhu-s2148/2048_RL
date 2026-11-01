@@ -148,7 +148,7 @@ def write_csv(path, rows):
 def main():
     parser = argparse.ArgumentParser(description='2048 vanilla DDQN evaluation diagnostics')
     parser.add_argument('--checkpoint-path', type=Path, help='Path to a single checkpoint')
-    parser.add_argument('--checkpoint-dir', type=Path, default=PROJECT_DIR / 'artifacts' / 'vanilla_DDQN' / 'checkpoints')
+    parser.add_argument('--checkpoint-dir', type=Path, default=PROJECT_DIR / 'artifacts' / 'VANILLA_DDQN' / 'checkpoints')
     parser.add_argument('--networks', nargs='*', help='Checkpoint names, with or without .pth')
     parser.add_argument('--episodes', type=int, default=1000)
     parser.add_argument('--modes', nargs='+', choices=['none', 'environment'], default=['none', 'environment'])

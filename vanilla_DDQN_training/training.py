@@ -16,6 +16,7 @@ import random
 import csv,json
 import numpy as np
 import argparse
+import math
 from helpers import state_gen, max_tile, valid_actions
 
 def set_seed(seed):
@@ -169,13 +170,13 @@ async def main():
             #reward calc
             next_state = state_gen(board.board_state)
             current_score = board.score
-            reward = current_score-prev_score
+            reward = 1+math.log2(current_score-prev_score+1)
             if reward!=0:
                 merging_moves+=1
             if current_state == next_state:
                 #print(current_state,next_state)
                 #print("invalid move")
-                reward-=1
+                reward-=2
                 invalid_moves+=1
 
                 '''

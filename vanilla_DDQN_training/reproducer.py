@@ -12,9 +12,9 @@ BENCHMARKIN_SCRIPT = SCRIPT_DIR.parent/"benchmark"/"benchmark_ddqn_diagnostics.p
 # Edit these entries to choose which experiments to run.
 # Each run has a distinct seed and session name.
 RUNS = [
-    {"seed": 42, "session": "1.1"},
-    {"seed": 43, "session": "1.2"},
-    {"seed": 44, "session": "1.3"}
+    {"seed": 42, "session": "2.1"},
+    {"seed": 43, "session": "2.2"},
+    {"seed": 44, "session": "2.3"}
 ]
 
 
@@ -84,7 +84,7 @@ def main():
         "--networks"
     ]+networks
 
-    bench_result = subprocess.run(benchmark_command, cwd=SCRIPT_DIR.parent/"benchmark")
+    bench_result = subprocess.run(benchmark_command, cwd=SCRIPT_DIR.parent/"benchmark"/"ddqn")
 
     if bench_result.returncode != 0:
                 print(
